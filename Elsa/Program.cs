@@ -21,53 +21,96 @@ do
     Thread.Sleep(TimeSpan.FromSeconds(5));
 } while (true);
 
+List<int> operands = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+var errors = 0;
 do
 {
-    var mul2 = Random.Shared.Next(10);
+    var rand = Random.Shared.Next(operands.Count);
 
     do
     {
+        var mul2 = operands[rand];
+        operands.RemoveAt(rand);
+
         Console.Clear();
 
-        var result = AskQuestion(mul1, mul2)
+        (string Message, bool Again) result = AskQuestion(mul1, mul2)
             .Match(
-                _ => ("Bravo Elsa", false, false),
-                error => error switch
+                _ => ("Bravo Elsa", false),
+                error =>
                 {
-                    ExitException => ("Au revoir Elsa.", true, false),
-                    NotUnderstoodException => ("Je n'ai pas compris.", false, true),
-                    WrongAnswerException => ("Non ce n'est pas ça.", false, true),
-                    _ => ("Il y a eu un problème", true, false)
+                    if (error is not WrongAnswerException wae)
+                        return ("Je n'ai pas compris.", true);
+
+                    errors++;
+                    operands.Add(mul2);
+                    return ($"Non, la réponse était {wae.RightAnswer}.", false);
                 });
 
-        Console.WriteLine(result.Item1);
-        if (result.Item2) return;
-        if (!result.Item3) break;
-        Thread.Sleep(TimeSpan.FromSeconds(5));
-    } while (true);
+        // Affichage du message
+        Console.WriteLine(result.Message);
+
+        // En cas d'incompréhension, on repose la même question
+        if (!result.Again)
+        {
+            rand = Random.Shared.Next(operands.Count);
+        }
+        else
+        {
+            operands.Insert(rand, mul2);
+        }
+
+        Console.ReadLine();
+    } while (operands.Count > 0);
+
+    Console.Clear();
+    Console.WriteLine(errors == 0 ? $"Tu n'as pas d'erreurs." : $"Tu as fait {errors} erreurs.");
+
+    if (errors <= 5)
+    {
+        Console.Write("*");
+        Thread.Sleep(TimeSpan.FromSeconds(1));
+    }
+
+    if (errors <= 2)
+    {
+        Console.Write("*");
+        Thread.Sleep(TimeSpan.FromSeconds(1));
+    }
+
+    if (errors == 0)
+    {
+        Console.WriteLine("*");
+        Console.WriteLine("Bravo Elsa, tu as fait tout juste!!!");
+    }
+    else
+    {
+        Console.WriteLine();
+        Console.WriteLine("Essaye de faire mieux la prochaine fois");
+    }
 
     if (!AskContinue())
     {
         Console.WriteLine("Au revoir Elsa");
         return;
     }
+    
+    operands = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    errors = 0;
 } while (true);
 
 Result<Unit> AskQuestion(int op1, int op2)
 {
     Console.WriteLine($"Combien font {op1} x {op2}?");
-    Console.WriteLine("Donne ta réponse et appuie sur Entrée (q pour quitter)");
     var response = Console.ReadLine();
-
-    if (response == "q")
-        return new Result<Unit>(ExitException.Instance);
 
     if (!int.TryParse(response, out var result))
         return new Result<Unit>(NotUnderstoodException.Instance);
 
-    return result == op1 * op2
-        ? Prelude.unit
-        : new Result<Unit>(WrongAnswerException.Instance);
+    if (result == op1 * op2) return Prelude.unit;
+
+    var e = new WrongAnswerException(op1 * op2);
+    return new Result<Unit>(e);
 }
 
 bool AskContinue()

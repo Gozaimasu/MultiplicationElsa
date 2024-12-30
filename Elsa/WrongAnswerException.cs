@@ -2,7 +2,10 @@
 
 public class WrongAnswerException : Exception
 {
-    public static WrongAnswerException Instance = new();
-    
-    private WrongAnswerException() { }
+    public int RightAnswer { get; }
+
+    public WrongAnswerException(int rightAnswer)
+    {
+        RightAnswer = rightAnswer;
+    }
 }
