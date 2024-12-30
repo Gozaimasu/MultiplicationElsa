@@ -46,11 +46,7 @@ do
         Thread.Sleep(TimeSpan.FromSeconds(5));
     } while (true);
 
-    Console.WriteLine("On continue? ([O]ui/[N]on)");
-    var quitter = Console.ReadKey();
-    Console.WriteLine();
-
-    if (quitter.Key != ConsoleKey.O)
+    if (!AskContinue())
     {
         Console.WriteLine("Au revoir Elsa");
         return;
@@ -63,22 +59,22 @@ Result<Unit> AskQuestion(int op1, int op2)
     Console.WriteLine("Donne ta réponse et appuie sur Entrée (q pour quitter)");
     var response = Console.ReadLine();
 
-    Exception e;
-
     if (response == "q")
-    {
-        e = new ExitException();
-        return new Result<Unit>(e);
-    }
+        return new Result<Unit>(ExitException.Instance);
 
     if (!int.TryParse(response, out var result))
-    {
-        e = new NotUnderstoodException();
-        return new Result<Unit>(e);
-    }
+        return new Result<Unit>(NotUnderstoodException.Instance);
 
-    if (result == op1 * op2) return Prelude.unit;
+    return result == op1 * op2
+        ? Prelude.unit
+        : new Result<Unit>(WrongAnswerException.Instance);
+}
 
-    e = new WrongAnswerException();
-    return new Result<Unit>(e);
+bool AskContinue()
+{
+    Console.WriteLine("On continue? ([O]ui/[N]on)");
+    var quitter = Console.ReadKey();
+    Console.WriteLine();
+
+    return quitter.Key == ConsoleKey.O;
 }
